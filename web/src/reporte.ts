@@ -15,6 +15,11 @@ export type Reporte = {
   clima: string; situacion: string; acciones: string; necesidades: string; responsable: string;
 };
 
+const MUNICIPIOS = ['Abasolo', 'Acámbaro', 'Apaseo el Alto', 'Apaseo el Grande', 'Atarjea', 'Celaya', 'Comonfort', 'Coroneo', 'Cortazar', 'Cuerámaro',
+  'Doctor Mora', 'Dolores Hidalgo Cuna de la Independencia Nacional', 'Guanajuato', 'Huanímaro', 'Irapuato', 'Jaral del Progreso', 'Jerécuaro', 'León',
+  'Manuel Doblado', 'Moroleón', 'Ocampo', 'Pénjamo', 'Pueblo Nuevo', 'Purísima del Rincón', 'Romita', 'Salamanca', 'Salvatierra', 'San Diego de la Unión',
+  'San Felipe', 'San Francisco del Rincón', 'San José Iturbide', 'San Luis de la Paz', 'San Miguel de Allende', 'Santa Catarina', 'Santa Cruz de Juventino Rosas',
+  'Santiago Maravatío', 'Silao de la Victoria', 'Tarandacuao', 'Tarimoro', 'Tierra Blanca', 'Uriangato', 'Valle de Santiago', 'Victoria', 'Villagrán', 'Xichú', 'Yuriria'];
 const VEGETACION = ['Pastizal', 'Matorral', 'Encino', 'Pino-encino', 'Pino', 'Selva baja', 'Agrícola / rastrojo', 'Hojarasca'];
 const COMPORTAMIENTO = ['Superficial', 'De copa', 'Subterráneo', 'Lento', 'Rápido', 'Con pavesas'];
 
@@ -66,7 +71,9 @@ export function pantallaReporte(id?: string) {
       ${campo('nombre', 'Nombre del incendio', 'text', 'placeholder="Ej. Sierra de Santa Rosa – El Zangarro"')}
       <div class="rejilla2">
         <div class="campo"><span class="etq">Ubicación (GPS)</span><button type="button" class="valor-auto" id="gps">${rep.ubicacion ? fmtCoord(rep.ubicacion) : 'Tocar para obtener'}</button></div>
-        ${campo('municipio', 'Municipio')}
+        <div class="campo"><label for="f-municipio">Municipio</label><select id="f-municipio" name="municipio">
+          <option value="">Elegir…</option>${[...new Set([...(rep.municipio && !MUNICIPIOS.includes(rep.municipio) ? [rep.municipio] : []), ...MUNICIPIOS])].map((m) => `<option ${m === rep.municipio ? 'selected' : ''}>${esc(m)}</option>`).join('')}
+        </select></div>
       </div>
       <div class="rejilla2">
         ${campo('deteccion', 'Detección', 'datetime-local')}
@@ -110,7 +117,7 @@ export function pantallaReporte(id?: string) {
   }));
   const completarLugar = async (p: Punto) => {
     rep.ubicacion = p; $('#gps').textContent = fmtCoord(p);
-    const m = await municipioDe(p); const inp = $('#f-municipio') as HTMLInputElement; if (m && !inp.value) inp.value = m;
+    const m = await municipioDe(p); const inp = $('#f-municipio') as HTMLSelectElement; if (m && !inp.value) inp.value = m;
     const c = await combustibleEn(p).catch(() => null);
     if (c) $('#sugerencia').textContent = `Según INEGI aquí hay: ${c.veg} (${c.combustible}).`;
     guardarYa();

@@ -12,7 +12,7 @@ App gratuita para **combatientes de incendios forestales y de pastizal de Guanaj
 | Mapa | Capas de todo Guanajuato **sin señal**: combustibles (INEGI Serie VII), brechas y caminos (RNC 2019), relieve, pendiente, régimen de fuego (preliminar), agua y límites. Puntos de calor de NASA FIRMS. |
 | Clima | Viento, rachas, humedad y temperatura (Open-Meteo), **regla 30-30-30** y aviso de **cambio de viento** en las próximas 6 h. Se guarda para verlo sin señal. |
 | Perímetro | Caminar el borde con GPS → hectáreas, distancia y tiempo. Exporta GeoJSON. |
-| Seguridad | LACES, zonas seguras con distancia y rumbo, recordatorio para reportar al vigía y SOS (911, SMS o WhatsApp con la ubicación). |
+| Seguridad | Lista LCES (vigía, comunicación, rutas de escape, zona segura), zonas seguras con distancia y rumbo, recordatorio para reportar al vigía y SOS (911, SMS o WhatsApp con la ubicación). |
 | Reporte | Resumen SCI-201 que se llena solo con GPS, municipio, perímetro y clima. Genera PDF. |
 
 Todo se guarda **solo en el teléfono**. El seguimiento de brigada en tiempo real y el envío de reportes a una central

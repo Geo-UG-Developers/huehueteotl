@@ -24,6 +24,9 @@ svg { flex-shrink: 0; }
 #app { position: relative; z-index: 2; max-width: 560px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
 body.con-mapa #app { height: 100dvh; overflow: hidden; }
 #mapa { position: absolute; z-index: 1; visibility: hidden; }
+/* #app queda encima del mapa: lo hacemos «transparente» al tacto y solo sus barras y botones reciben toques. */
+body.mapa-activo #app { pointer-events: none; }
+body.mapa-activo #app > :not(.hueco-mapa) { pointer-events: auto; }
 #mapa .maplibregl-ctrl-attrib { font-size: 10px; }
 
 /* Cabecera */
@@ -58,8 +61,8 @@ body.con-mapa #app { height: 100dvh; overflow: hidden; }
 .arriba-izq { top: 10px; left: 10px; right: 70px; display: flex; flex-wrap: wrap; gap: 6px; }
 .arriba-der { top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; }
 .abajo { left: 10px; right: 10px; bottom: 26px; }
-.chip-capa { border: 1.5px solid var(--borde); background: #fff; color: var(--tinta); padding: 7px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; min-height: 36px; }
-.chip-capa.si { background: var(--negro); color: #fff; border-color: var(--negro); }
+.chip-capa { -webkit-appearance: none; appearance: none; border: 1.5px solid var(--negro); background: var(--negro); color: #fff; padding: 7px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; min-height: 36px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.chip-capa.si { background: var(--rojo); border-color: var(--rojo); color: #fff; }
 .boton-mapa { width: 48px; height: 48px; border-radius: 12px; border: 0; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; }
 .tarjeta-mapa { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); color: var(--tinta); text-decoration: none; }
 .tarjeta-mapa.verde { background: var(--verde); color: #fff; }
@@ -153,6 +156,7 @@ details summary { font-weight: 600; cursor: pointer; min-height: 32px; }
 .campo label, .etq { font-size: 13px; font-weight: 600; }
 .campo input, .campo textarea { min-height: 48px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #9AA192; background: #fff; font-size: 16px; width: 100%; }
 .campo textarea { resize: vertical; }
+.campo select { min-height: 48px; width: 100%; border: 1.5px solid #9AA192; font-size: 16px; }
 .valor-auto { min-height: 48px; padding: 0 12px; border-radius: 10px; border: 0; background: #E9ECE3; font-weight: 600; font-size: 14px; text-align: left; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #9AA192; background: #fff; font-weight: 600; font-size: 14px; }

@@ -114,6 +114,8 @@ export function colocarMapa(hueco: HTMLElement | null) {
   const cont = document.getElementById('mapa')!;
   observador?.disconnect();
   document.body.classList.toggle('con-mapa', !!hueco && !hueco.classList.contains('medio'));
+  // Con el mapa a la vista, los toques en el hueco llegan al mapa (zoom con dos dedos) y no a la página.
+  document.body.classList.toggle('mapa-activo', !!hueco);
   if (!hueco) { cont.style.visibility = 'hidden'; return; }
   const ajustar = () => {
     const r = hueco.getBoundingClientRect();
