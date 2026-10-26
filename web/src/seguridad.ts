@@ -2,8 +2,9 @@
 // En esta versión todo funciona en el teléfono. El seguimiento de la brigada en tiempo real llega con el servidor.
 import { guardar, leer, nuevoId } from './almacen';
 import { cardinalLargo, distancia, fmtCoord, fmtDistancia, posicionActual, rumbo, ultimaPosicion, type Punto } from './geo';
+import { rutaMasCercana, rutasEscape } from './escape';
 import { ponerDatos } from './mapa';
-import { $, app, aviso, cabecera, esc, flechaRumbo, nav, pantallaEncendida, pitido, vibrar } from './ui';
+import { $, app, aviso, cabecera, esc, flechaRumbo, IC, nav, pantallaEncendida, pitido, vibrar } from './ui';
 
 export type Zona = Punto & { id: string; nombre: string; creada: number };
 const LCES = [
@@ -21,7 +22,7 @@ export function zonaMasCercana(yo: Punto | null) {
   if (!yo) return null;
   return zonas().map((z) => ({ z, d: distancia(yo, z) })).sort((a, b) => a.d - b.d)[0] ?? null;
 }
-/** Minutos a pie aproximados (3 km/h en terreno de monte). */
+/** Minutos a pie en línea recta (3 km/h en monte). Es un mínimo: con pendiente se tarda más. */
 export const minutosAPie = (m: number) => Math.max(1, Math.round(m / 50));
 
 export function rutaAZona(yo: Punto | null, z: Zona | null): GeoJSON.FeatureCollection {
@@ -74,11 +75,14 @@ export function pantallaSeguridad() {
     ${cerca ? `
     <a class="tarjeta-escape" href="#/mapa?escape">
       ${flechaRumbo(rumbo(yo!, cerca.z), 40, '#FFFFFF')}
-      <span><small>IR A ZONA SEGURA · ${esc(cerca.z.nombre)}</small>
-      <b>${fmtDistancia(cerca.d)} · ${minutosAPie(cerca.d)} min a pie</b>
-      <small>Hacia el ${cardinalLargo(rumbo(yo!, cerca.z))}. Ver en el mapa.</small></span>
+      <span><small>RUMBO A ZONA SEGURA · ${esc(cerca.z.nombre)}</small>
+      <b>${fmtDistancia(cerca.d)} en línea recta</b>
+      <small>Hacia el ${cardinalLargo(rumbo(yo!, cerca.z))} · al menos ${minutosAPie(cerca.d)} min. No es una ruta: ver avisos en el mapa.</small></span>
     </a>` : `
     <div class="tarjeta aviso-ambar"><b>No hay zona segura marcada</b><p>Márcala al llegar al incendio, antes de empezar el ataque.</p></div>`}
+    ${(() => { const rc = rutaMasCercana(yo), n = rutasEscape().length; return `
+    <a class="tarjeta enlace" href="#/ruta-escape">${IC.flecha}<span class="col"><b>Rutas de escape grabadas: ${n}</b>
+      <small class="tenue">${rc ? `La más cercana: ${esc(rc.r.nombre)} · ${fmtDistancia(rc.m)} · ${rc.min} min reales.` : 'Ninguna todavía.'} ${n < 2 ? 'LCES pide al menos dos. Toca para grabar.' : 'Toca para ver o grabar otra.'}</small></span></a>`; })()}
     <div class="botones2">
       <button class="btn verde" id="marcar-zona">Marcar zona segura aquí</button>
       <a class="btn borde" href="#/mapa?marcar">Marcar en el mapa</a>
@@ -140,6 +144,7 @@ export function pantallaSeguridad() {
 export function agregarZona(p: Punto) {
   const lista = zonas();
   const z: Zona = { id: nuevoId(), nombre: `Zona segura ${lista.length + 1}`, lat: p.lat, lon: p.lon, creada: Date.now() };
+  if (p.alt != null) z.alt = p.alt;
   guardar('zonas', [...lista, z]);
   void ponerDatos('zonas', zonasFC());
   aviso(`${z.nombre} guardada`, 'ok');

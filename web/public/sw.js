@@ -1,6 +1,6 @@
 // Huehuetéotl · service worker: guarda la app para abrirla sin señal.
 // Las capas (.pmtiles) no pasan por aquí: la app las descarga completas a su almacén (ver src/capas.ts).
-const VERSION = 'huehue-v2';
+const VERSION = 'huehue-v3';
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'favicon.png', 'geoug-clara.png', 'geoug.png'])).then(() => self.skipWaiting()));
 });

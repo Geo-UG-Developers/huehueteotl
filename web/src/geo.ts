@@ -1,7 +1,7 @@
 // GPS y cálculos geográficos ligeros (sin librerías).
 import { guardar, leer } from './almacen';
 
-export type Punto = { lat: number; lon: number; precision?: number; t?: number };
+export type Punto = { lat: number; lon: number; precision?: number; t?: number; alt?: number };
 
 // Centro aproximado de Guanajuato, por si nunca hubo GPS.
 export const CENTRO_GTO: Punto = { lat: 20.92, lon: -101.0 };
@@ -11,7 +11,8 @@ export function ultimaPosicion(): Punto | null {
 }
 
 function aPunto(p: GeolocationPosition): Punto {
-  const pt = { lat: p.coords.latitude, lon: p.coords.longitude, precision: Math.round(p.coords.accuracy), t: p.timestamp };
+  const pt: Punto = { lat: p.coords.latitude, lon: p.coords.longitude, precision: Math.round(p.coords.accuracy), t: p.timestamp };
+  if (p.coords.altitude != null) pt.alt = Math.round(p.coords.altitude);
   guardar('ultima-pos', pt);
   return pt;
 }
@@ -73,6 +74,12 @@ export function longitud(pts: Punto[], cerrar = false): number {
   if (cerrar && pts.length > 2) s += distancia(pts[pts.length - 1], pts[0]);
   return s;
 }
+
+/** Punto a una fracción f (0..1) del camino recto entre a y b. */
+export const intermedio = (a: Punto, b: Punto, f: number): Punto => ({ lat: a.lat + (b.lat - a.lat) * f, lon: a.lon + (b.lon - a.lon) * f });
+
+/** Diferencia entre dos rumbos en grados (0..180). */
+export const difRumbo = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
 
 const PUNTOS_CARDINALES = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
 export function cardinal(grados: number): string {

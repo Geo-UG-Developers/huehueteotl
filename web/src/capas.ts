@@ -16,9 +16,18 @@ const BASE = import.meta.env.BASE_URL;
 const urlDe = (c: Capa) => new URL(`${BASE}capas/${c.archivo}`, location.href).href;
 
 export const protocolo = new Protocol();
+const instancias: Partial<Record<Capa['id'], PMTiles>> = {};
+/** Archivo PMTiles de una capa (descargado o en línea), para leer teselas directamente. */
+export async function pmtilesDe(id: Capa['id']): Promise<PMTiles> {
+  await prepararFuentes();
+  // Descargada: la misma copia local que usa el mapa. En línea: lectura por partes desde GitHub Pages.
+  return (instancias[id] ??= new PMTiles(urlDe(ARCHIVOS.find((c) => c.id === id)!)));
+}
 
 /** Registra cada capa y devuelve la URL pmtiles:// que usa el estilo del mapa. */
-export async function prepararFuentes(): Promise<Record<Capa['id'], string>> {
+let fuentesListas: Promise<Record<Capa['id'], string>> | null = null;
+export function prepararFuentes(): Promise<Record<Capa['id'], string>> { return (fuentesListas ??= cargarFuentes()); }
+async function cargarFuentes(): Promise<Record<Capa['id'], string>> {
   const fuentes = {} as Record<Capa['id'], string>;
   let cache: Cache | null = null;
   try { cache = await caches.open(CACHE); } catch { /* navegador sin Cache Storage */ }
@@ -27,7 +36,7 @@ export async function prepararFuentes(): Promise<Record<Capa['id'], string>> {
     if (guardado) {
       const archivo = new File([await guardado.blob()], `local-${c.archivo}`);
       const p = new PMTiles(new FileSource(archivo));
-      protocolo.add(p);
+      protocolo.add(p); instancias[c.id] = p;
       fuentes[c.id] = `pmtiles://${p.source.getKey()}`;
     } else {
       fuentes[c.id] = `pmtiles://${urlDe(c)}`;

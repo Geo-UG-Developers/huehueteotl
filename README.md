@@ -13,6 +13,7 @@ App gratuita para **combatientes de incendios forestales y de pastizal de Guanaj
 | Clima | Viento, rachas, humedad y temperatura (Open-Meteo), **regla 30-30-30** y aviso de **cambio de viento** en las próximas 6 h. Se guarda para verlo sin señal. |
 | Perímetro | Caminar el borde con GPS → hectáreas, distancia y tiempo. Exporta GeoJSON. |
 | Seguridad | Lista LCES (vigía, comunicación, rutas de escape, zona segura), zonas seguras con distancia y rumbo, recordatorio para reportar al vigía y SOS (911, SMS o WhatsApp con la ubicación). |
+| Zona segura | Rumbo y distancia en **línea recta** a la zona segura (no es una ruta), con avisos de pendiente > 30 %, zona cuesta arriba, viento a favor del fuego y cruce del perímetro. **Rutas de escape grabadas** caminando con GPS: se dibujan en verde con su tiempo real. |
 | Reporte | Resumen SCI-201 que se llena solo con GPS, municipio, perímetro y clima. Genera PDF. |
 
 Todo se guarda **solo en el teléfono**. El seguimiento de brigada en tiempo real y el envío de reportes a una central
@@ -32,6 +33,11 @@ scripts/calor.mjs      descarga puntos de calor de NASA FIRMS
 ## Secretos (GitHub › Settings › Secrets and variables › Actions)
 
 - `FIRMS_MAP_KEY`: llave gratuita de NASA FIRMS (https://firms.modaps.eosdis.nasa.gov/api/map_key/). Sin ella la app funciona, pero no muestra puntos de calor.
+
+## Puntos de calor que no son incendios
+
+`web/src/calor.ts` › `FUENTES_FIJAS`: fuentes industriales conocidas (por ahora la refinería de Salamanca). Se dibujan en gris y no
+cuentan como incendio cercano. Agregar ahí las que se identifiquen.
 
 ## Fuentes de datos
 

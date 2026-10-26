@@ -49,6 +49,7 @@ function estilo(f: Record<string, string>): StyleSpecification {
       perimetro: { type: 'geojson', data: vacio() },
       zonas: { type: 'geojson', data: vacio() },
       ruta: { type: 'geojson', data: vacio() },
+      rutas: { type: 'geojson', data: vacio() },
       yo: { type: 'geojson', data: vacio() },
     },
     layers: [
@@ -69,14 +70,16 @@ function estilo(f: Record<string, string>): StyleSpecification {
         paint: { 'line-color': '#7A2E0E', 'line-width': 2, 'line-dasharray': [1, 2] } },
       { id: 'cam-car', type: 'line', source: 'v', 'source-layer': 'caminos', filter: ['==', 'clase', 'carretera'], layout: { visibility: v('brechas') },
         paint: { 'line-color': '#141414', 'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.8, 14, 4.5] } },
+      { id: 'rutas-borde', type: 'line', source: 'rutas', paint: { 'line-color': '#FFFFFF', 'line-width': 8 }, layout: { 'line-cap': 'round', 'line-join': 'round' } },
+      { id: 'rutas', type: 'line', source: 'rutas', paint: { 'line-color': '#1E7A46', 'line-width': 4.5 }, layout: { 'line-cap': 'round', 'line-join': 'round' } },
       { id: 'ruta', type: 'line', source: 'ruta', paint: { 'line-color': '#1E7A46', 'line-width': 5, 'line-dasharray': [0.6, 1.6] }, layout: { 'line-cap': 'round' } },
       { id: 'perimetro-relleno', type: 'fill', source: 'perimetro', filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': '#B3261E', 'fill-opacity': 0.2 } },
       { id: 'perimetro', type: 'line', source: 'perimetro', paint: { 'line-color': '#B3261E', 'line-width': 3.5 } },
       { id: 'zonas', type: 'circle', source: 'zonas', paint: { 'circle-radius': 11, 'circle-color': '#1E7A46', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } },
       { id: 'calor-halo', type: 'circle', source: 'calor', layout: { visibility: v('calor') },
-        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 6, 13, 16], 'circle-color': '#FF5A1F', 'circle-opacity': ['interpolate', ['linear'], ['get', 'horas'], 0, 0.45, 24, 0.12] } },
+        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 6, 13, 16], 'circle-color': '#FF5A1F', 'circle-opacity': ['case', ['get', 'fija'], 0, ['interpolate', ['linear'], ['get', 'horas'], 0, 0.45, 24, 0.12]] } },
       { id: 'calor', type: 'circle', source: 'calor', layout: { visibility: v('calor') },
-        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 3, 13, 7], 'circle-color': ['interpolate', ['linear'], ['get', 'horas'], 0, '#FF3D00', 12, '#FF8A3D', 48, '#9E7B6B'],
+        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 3, 13, 7], 'circle-color': ['case', ['get', 'fija'], '#8C8C8C', ['interpolate', ['linear'], ['get', 'horas'], 0, '#FF3D00', 12, '#FF8A3D', 48, '#9E7B6B']],
           'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.5 } },
       { id: 'yo-precision', type: 'circle', source: 'yo', paint: { 'circle-radius': 22, 'circle-color': '#1565C0', 'circle-opacity': 0.15 } },
       { id: 'yo', type: 'circle', source: 'yo', paint: { 'circle-radius': 8, 'circle-color': '#1565C0', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } },
@@ -139,7 +142,7 @@ export function alternarCapa(id: IdCapa, valor?: boolean) {
 }
 
 function fuente(id: string) { return mapa?.getSource(id) as GeoJSONSource | undefined; }
-export async function ponerDatos(id: 'calor' | 'perimetro' | 'zonas' | 'ruta' | 'yo', datos: GeoJSON.FeatureCollection) {
+export async function ponerDatos(id: 'calor' | 'perimetro' | 'zonas' | 'ruta' | 'rutas' | 'yo', datos: GeoJSON.FeatureCollection) {
   await obtenerMapa();
   fuente(id)?.setData(datos);
 }
@@ -153,11 +156,11 @@ export async function centrar(p: Punto, zoom?: number) {
   m.easeTo({ center: [p.lon, p.lat], zoom: zoom ?? Math.max(m.getZoom(), 13), duration: 600 });
 }
 
-export async function encuadrar(pts: Punto[]) {
+export async function encuadrar(pts: Punto[], relleno: number | { top: number; bottom: number; left: number; right: number } = 50) {
   const m = await obtenerMapa();
   if (pts.length < 2) { if (pts[0]) centrar(pts[0]); return; }
   const lons = pts.map((p) => p.lon), lats = pts.map((p) => p.lat);
-  m.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 50, maxZoom: 16, duration: 500 });
+  m.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: relleno, maxZoom: 16, duration: 500 });
 }
 
 /** Combustible y régimen bajo un punto (solo si esa zona está cargada en el mapa). */

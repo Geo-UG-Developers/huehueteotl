@@ -4,12 +4,14 @@ import { guardar, leer, nuevoId } from './almacen';
 import { calorFC, cercanos, obtenerCalor, type Calor } from './calor';
 import { ARCHIVOS, borrarDescargas, descargadas, descargarTodo } from './capas';
 import { cambioDeViento, climaGuardado, hace, haciaDonde, obtenerClima, regla303030, type Clima } from './clima';
-import { cardinal, cardinalLargo, CENTRO_GTO, fmtDistancia, posicionActual, ultimaPosicion, type Punto } from './geo';
+import { pantallaRutaEscape, rutaMasCercana, rutasFC } from './escape';
+import { cardinal, cardinalLargo, CENTRO_GTO, fmtDistancia, posicionActual, rumbo, ultimaPosicion, type Punto } from './geo';
 import { PRIVACIDAD, TERMINOS } from './legal';
 import { alTocarMapa, alternarCapa, capaVisible, centrar, colocarMapa, COMBUSTIBLES, encuadrar, NOMBRE_CAPA, ponerDatos, puntoFC, type IdCapa } from './mapa';
 import { pantallaPerimetro } from './perimetro';
 import { pantallaReporte } from './reporte';
 import { agregarZona, minutosAPie, pantallaSeguridad, rutaAZona, zonaMasCercana, zonasFC } from './seguridad';
+import { avisosHTML, revisarCamino } from './terreno';
 import { $, app, aviso, BASE, cabecera, esc, flechaRumbo, fmtHora, IC, nav } from './ui';
 
 // ---------------------------------------------------------------- datos compartidos
@@ -53,12 +55,14 @@ function bienvenida() {
 }
 
 // ---------------------------------------------------------------- mapa
+const linea = (pts: Punto[]): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: pts.length >= 2 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: pts.map((p) => [p.lon, p.lat]) } }] : [] });
 function pantallaMapa(modo: string) {
   const c = climaGuardado();
   const r = c ? regla303030(c.actual) : null;
   const yo = ultimaPosicion();
   const cerca = calor && yo ? cercanos(calor, yo) : [];
   const zona = zonaMasCercana(yo);
+  const grabada = modo === 'escape' ? rutaMasCercana(yo) : null;
   app().innerHTML = `
   ${cabecera('Mapa')}
   <a class="tira-clima" href="#/clima" aria-label="Ver condiciones del tiempo">
@@ -78,7 +82,15 @@ function pantallaMapa(modo: string) {
       <button class="boton-mapa" id="ubicar" aria-label="Centrar en mi ubicación">${IC.ubicar}</button>
     </div>
     ${modo === 'marcar' ? `<div class="sobre-mapa abajo tarjeta-mapa"><b>Toca el mapa donde está la zona segura</b><a class="btn-chico" href="#/seguridad">Cancelar</a></div>`
-    : modo === 'escape' && zona ? `<div class="sobre-mapa abajo tarjeta-mapa verde">${flechaRumbo(0, 28, '#fff')}<span class="col"><b>${fmtDistancia(zona.d)} a ${esc(zona.z.nombre)}</b><small>${minutosAPie(zona.d)} min a pie · línea recta, sigue la brecha más segura</small></span></div>`
+    : modo === 'escape' && grabada ? `<div class="sobre-mapa abajo tarjeta-mapa verde escape-card"><div class="fila-escape">${flechaRumbo(rumbo(yo!, grabada.inicio), 28, '#fff')}<span class="col">
+        <small>RUTA DE ESCAPE GRABADA · ${esc(grabada.r.nombre)}</small><b>${fmtDistancia(grabada.m)} · ${grabada.min} min reales</b>
+        <small>${grabada.aRuta > 30 ? `Estás a ${fmtDistancia(grabada.aRuta)} de la ruta: ve hacia el ${cardinalLargo(rumbo(yo!, grabada.inicio))} para tomarla.` : 'Estás sobre la ruta: síguela (línea verde continua).'}</small></span></div>
+        <ul class="avisos" id="avisos-escape"><li class="aviso-info">Revisando pendiente, desnivel y viento…</li></ul></div>`
+    : modo === 'escape' && zona ? `<div class="sobre-mapa abajo tarjeta-mapa escape-card"><div class="fila-escape">${flechaRumbo(rumbo(yo!, zona.z), 28)}<span class="col">
+        <small>RUMBO A ZONA SEGURA · ${esc(zona.z.nombre)}</small><b>${fmtDistancia(zona.d)} en línea recta · al menos <span id="min-escape">${minutosAPie(zona.d)}</span> min</b></span></div>
+        <p class="no-ruta">No es una ruta: es la dirección en línea recta. Sigue la ruta de escape que la brigada recorrió.</p>
+        <ul class="avisos" id="avisos-escape"><li class="aviso-info">Revisando pendiente, desnivel y viento…</li></ul>
+        <a class="btn-chico" href="#/ruta-escape">Grabar ruta de escape</a></div>`
     : cerca.length ? `<a class="sobre-mapa abajo tarjeta-mapa" href="#/mapa?calor"><span class="ic-calor">${IC.llama}</span><span class="col"><b>${cerca.length} punto${cerca.length > 1 ? 's' : ''} de calor a ${fmtDistancia(cerca[0].dist)}</b><small>${esc(cerca[0].satelite)} · ${hace(Date.now() - cerca[0].horas * 3.6e6)}${c ? ` · el viento empuja hacia el ${cardinalLargo(haciaDonde(c.actual.dir))}` : ''}</small></span></a>`
     : calor?.nota ? `<div class="sobre-mapa abajo tarjeta-mapa"><small>${esc(calor.nota)}</small></div>` : ''}
     <div id="caja-leyenda" class="sobre-mapa leyenda" hidden>
@@ -86,20 +98,33 @@ function pantallaMapa(modo: string) {
       ${COMBUSTIBLES.map(([n, col]) => `<span><i style="background:${col}"></i>${n}</span>`).join('')}
       <b>Brechas</b><span><i class="linea negra"></i>Carretera</span><span><i class="linea cafe"></i>Terracería</span><span><i class="linea cafe punteada"></i>Vereda</span>
       <b>Pendiente</b><span><i style="background:#F2C800"></i>15–30 %</span><span><i style="background:#F08200"></i>30–45 %</span><span><i style="background:#D23C14"></i>45–60 %</span><span><i style="background:#8C143C"></i>más de 60 %</span>
+      <b>Escape</b><span><i class="linea verde"></i>Ruta de escape grabada</span><span><i class="linea verde punteada"></i>Línea recta a la zona segura (no es ruta)</span>
+      <b>Puntos de calor</b><span><i class="redondo" style="background:#FF3D00"></i>Detección reciente</span><span><i class="redondo" style="background:#8C8C8C"></i>Fuente industrial conocida (no es incendio)</span>
       <b>Régimen de fuego (preliminar)</b><span><i style="background:#3D7448"></i>Adaptado al fuego</span><span><i style="background:#B3261E"></i>Sensible al fuego</span><span><i style="background:#E8D36A"></i>Uso agropecuario</span>
     </div>
   </div>
   <div class="acciones-mapa">
     <a class="btn negro" href="#/perimetro">${IC.perimetro}Perímetro</a>
-    <a class="btn verde" href="${zona ? '#/mapa?escape' : '#/seguridad'}">${IC.flecha}Escape</a>
+    <a class="btn verde" href="${zona ? '#/mapa?escape' : '#/seguridad'}">${IC.flecha}Zona segura</a>
     <a class="btn rojo" href="#/reporte/nuevo">${IC.doc}Reportar</a>
   </div>
   ${nav('mapa')}`;
   colocarMapa($('#hueco'));
   void ponerDatos('zonas', zonasFC());
   void ponerDatos('yo', puntoFC(yo));
-  void ponerDatos('ruta', modo === 'escape' && zona ? rutaAZona(yo, zona.z) : rutaAZona(null, null));
-  if (modo === 'escape' && zona && yo) void encuadrar([yo, zona.z]);
+  void ponerDatos('rutas', rutasFC());
+  void ponerDatos('ruta', modo === 'escape' && grabada ? linea(grabada.aRuta > 30 && yo ? [yo, grabada.inicio] : []) : modo === 'escape' && zona ? rutaAZona(yo, zona.z) : rutaAZona(null, null));
+  if (modo === 'escape' && yo && (grabada || zona)) {
+    const camino = grabada ? grabada.resto : [yo, zona!.z];
+    // Encuadra el camino en la parte del mapa que no tapa la tarjeta.
+    const ver = () => { const t = document.querySelector<HTMLElement>('.escape-card'); void encuadrar([yo, ...camino], { top: 110, left: 40, right: 70, bottom: (t?.offsetHeight ?? 200) + 50 }); };
+    ver();
+    void revisarCamino(camino, !grabada).then((rv) => {
+      const ul = document.getElementById('avisos-escape'); if (ul) ul.innerHTML = avisosHTML(rv.avisos);
+      const mn = document.getElementById('min-escape'); if (mn) mn.textContent = String(rv.minutos);
+      ver();
+    });
+  }
   if (modo === 'calor' && cerca[0]) void encuadrar([yo!, cerca[0]]);
   alTocarMapa(modo === 'marcar' ? (p: Punto) => { agregarZona(p); location.hash = '#/seguridad'; } : null);
 
@@ -214,6 +239,7 @@ function ir() {
     case 'clima': return pantallaClima();
     case 'perimetro': return pantallaPerimetro();
     case 'seguridad': colocarMapa(null); return pantallaSeguridad();
+    case 'ruta-escape': return pantallaRutaEscape();
     case 'reporte':
       colocarMapa(null);
       if (arg === 'nuevo') { location.replace(`#/reporte/${nuevoId()}`); return; }
