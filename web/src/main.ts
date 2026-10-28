@@ -34,6 +34,19 @@ async function actualizarClima(forzar = false): Promise<Clima | null> {
 }
 
 // ---------------------------------------------------------------- bienvenida
+// La bienvenida se muestra cada vez que se abre la app: la marca de «ya la vio» vive solo en esta sesión
+// (sessionStorage). En localStorage solo queda si ya se le ofrecieron los mapas sin señal.
+const CLAVE_BIENVENIDA = 'huehue-bienvenida-sesion';
+let vistaEnMemoria = false; // respaldo si el navegador bloquea sessionStorage (modo privado estricto)
+function bienvenidaVista(): boolean {
+  if (vistaEnMemoria) return true;
+  try { return sessionStorage.getItem(CLAVE_BIENVENIDA) === '1'; } catch { return false; }
+}
+function marcarBienvenida() {
+  vistaEnMemoria = true;
+  try { sessionStorage.setItem(CLAVE_BIENVENIDA, '1'); } catch { /* queda solo en memoria hasta cerrar la app */ }
+}
+
 function bienvenida() {
   colocarMapa(null);
   app().innerHTML = `
@@ -51,7 +64,17 @@ function bienvenida() {
     <p class="legal-claro">Al continuar aceptas los <a href="#/terminos">términos de uso</a> y el <a href="#/privacidad">aviso de privacidad</a>.</p>
     <div class="credito"><img src="${BASE}geoug-clara.png" alt=""><span>Desarrollado por <b>GEO UG Developers</b> · Universidad de Guanajuato</span></div>
   </main>`;
-  $('#seguir').addEventListener('click', () => { guardar('bienvenida', true); location.hash = '#/capas?primera'; });
+  $('#seguir').addEventListener('click', () => {
+    marcarBienvenida();
+    // Los mapas se ofrecen solo la primera vez que se usa la app (antes esa marca se llamaba «bienvenida»).
+    const primera = !leer('capas-ofrecidas', leer('bienvenida', false));
+    guardar('capas-ofrecidas', true);
+    // Si se abrió un enlace a una pantalla concreta, se va ahí; si no, al mapa.
+    const destino = /^#\/?(inicio)?$/.test(location.hash || '#/') ? null : location.hash;
+    if (primera) location.hash = '#/capas?primera';
+    else if (destino) ir();
+    else location.hash = '#/mapa';
+  });
 }
 
 // ---------------------------------------------------------------- mapa
@@ -212,7 +235,7 @@ async function pantallaCapas(primera: boolean) {
 // ---------------------------------------------------------------- legal y acerca
 function legal(cual: 'privacidad' | 'terminos') {
   colocarMapa(null);
-  app().innerHTML = `${cabecera(cual === 'privacidad' ? 'Aviso de privacidad' : 'Términos de uso', { atras: leer('bienvenida', false) ? '#/acerca' : '#/inicio' })}
+  app().innerHTML = `${cabecera(cual === 'privacidad' ? 'Aviso de privacidad' : 'Términos de uso', { atras: bienvenidaVista() ? '#/acerca' : '#/inicio' })}
   <main class="pantalla"><article class="articulo">${cual === 'privacidad' ? PRIVACIDAD : TERMINOS}</article></main>`;
 }
 
@@ -232,7 +255,7 @@ function acerca() {
 function ir() {
   const [ruta, arg] = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');
   const q = location.hash.split('?')[1] ?? '';
-  if (!leer('bienvenida', false) && !['privacidad', 'terminos'].includes(ruta)) return bienvenida();
+  if (!bienvenidaVista() && !['privacidad', 'terminos'].includes(ruta)) return bienvenida();
   window.scrollTo(0, 0);
   alTocarMapa(null);
   switch (ruta) {

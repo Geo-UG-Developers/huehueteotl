@@ -1,7 +1,9 @@
 {
   "name": "Huehuetéotl · Combatientes forestales",
   "short_name": "Huehuetéotl",
+  "id": "/huehueteotl/",
   "start_url": "./",
+  "scope": "/huehueteotl/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#141414",
